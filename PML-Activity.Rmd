@@ -1,0 +1,68 @@
+---
+output: html_document
+---
+Predict the performace of exercise
+==================================
+
+```{r,echo=FALSE}
+library(lattice)
+library(ggplot2)
+library(caret)
+```
+
+Nowadays we have different devices to quantify self movement. One thing that people regularly do is quantify how *much* of a particular activity they do, but they rarely quantify *how well* they do it. In this project, our goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.
+
+We want to predict the manner in which some people do one exercise.
+
+The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har.
+
+#Data Analysis
+We load the data and look them to remove the zero covariates.
+```{r, echo=FALSE}
+setwd("~/Desktop/Data Science/Practical Machine Learning/Project")
+data <- read.csv("pml-training.csv")
+newData <- data[,c(37:45, 60:68, 113:121, 151:160)]
+nsv <- nearZeroVar(newData, saveMetrics=TRUE)
+nsv
+```
+
+The measures are taken from the *belt*, the *arm*, the *dumbbell* and the *forearm*. We use the inertial mesurements units as they are the one's used to record the data and then to model the mistakes.
+
+Each subject does the 5 classes of exercises, one good performance and four mistakes. Therefor the *subject* is not important, neither the *time* or *window* for our purpose.
+
+The calculations are only done in the *new window*, wich are 406 times from 19622 observations. We omit all this variables for our model.
+
+There are no more variables with zero covariance.
+
+#Prediction Model
+We set the seed and create one *training* and one *testing* data sets from *"pml-training.csv"*. We assign *70%* of the data to the *training* set and *30%* to the *testing* set.
+```{r, echo=FALSE}
+set.seed(28883)
+inTrain <- createDataPartition(y=newData$classe, p = 0.7, list = FALSE)
+training <- newData[inTrain,]
+testing <- newData[-inTrain,]
+```
+
+We build our model using the random forest method as it has a very good accuracy and we are not very concern about speed. Also is the model follow i the paper to identify the *mistake* classes that we should predict.
+
+We build the model working with the *training* data set.
+```{r, cache=TRUE}
+library(randomForest)
+modelFit <- train(classe ~ ., method = "rf", data = training)
+modelFit
+```
+
+We obtain a very accurate model.
+
+#Model Analysis
+We test our model over the *testing* set and look for the performance in a **Confusion Matrix**.
+```{r}
+predictions <- predict(modelFit, newdata = testing)
+confusionMatrix(predictions, testing$classe)
+```
+
+We can figure that the *Out of Sample* error will be very small as the accurcy when testing our model over the *testing* set is around **0.988**.
+
+As we have build our model with our *training* data set and the we have tested it over the *testing* set that is a different one, we can estimate the error.
+
+We have **Out of Sample Error Rate** to be = 1 - 0.9878. That is **1.2%**.
